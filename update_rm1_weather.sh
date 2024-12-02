@@ -22,7 +22,7 @@ python3 gen_image_detailed_2.py
 sleep 10
 
 # Transfer the image to RM1 device
-scp $IMAGE_PATH $RM1_CONFIG_NAME:$REMOTE_IMAGE_PATH
+scp $IMAGE_PATH $RM1_USER@$RM1_IP:$REMOTE_IMAGE_PATH
 
 # Power off the RM1 device
 #ssh $RM1_USER@$RM1_IP 'reboot -p'
