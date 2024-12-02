@@ -2,6 +2,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import datetime
 import io
+import textwrap
 
 # Configuration
 BASE_URL = "https://api.weather.gov"
@@ -85,17 +86,27 @@ def create_weather_image(daily_data, hourly_data, grid_data):
     draw = ImageDraw.Draw(image)
 
     # Load fonts
-    font_size_title = 64
-    font_size_text = 36
-    font_size_small_text = 28
+    font_size_title = 80
+    font_size_text = 45
+    font_size_small_text = 36
     font_title = ImageFont.truetype(FONT_PATH, font_size_title)
     font_text = ImageFont.truetype(FONT_PATH, font_size_text)
     font_small_text = ImageFont.truetype(FONT_PATH, font_size_small_text)
 
+    # Fonts for hourly forecast
+    font_size_time = 50  # Largest
+    font_size_temp = 45 # Medium
+    font_size_main = 40  # Precipitation
+    font_size_humidity = 36  # Slightly smaller
+    font_time = ImageFont.truetype(FONT_PATH, font_size_time)
+    font_temp = ImageFont.truetype(FONT_PATH, font_size_temp)
+    font_main = ImageFont.truetype(FONT_PATH, font_size_main)
+    font_humidity = ImageFont.truetype(FONT_PATH, font_size_humidity)
+
     # Prepare the header text
     now = datetime.datetime.now()
     date_str = now.strftime("%A, %B %d, %Y")
-    header_text = f"Weather Forecast for {date_str}"
+    header_text = f"{date_str}"
 
     # Draw the header
     header_bbox = draw.textbbox((0, 0), header_text, font=font_title)
@@ -142,13 +153,37 @@ def create_weather_image(daily_data, hourly_data, grid_data):
     icon_y = overview_y + 10
     image.paste(icon_image, (icon_x, icon_y))
 
-    # Prepare text
-    overview_text = f"{short_forecast}\nHigh: {temp_high}°{temp_unit}\nLow: {temp_low}°{temp_unit}"
+    # Define a function to wrap text within a given pixel width
+    def wrap_text(text, font, max_width, draw):
+        lines = []
+        words = text.split()
+        while words:
+            line = ''
+            while words:
+                word = words[0]
+                test_line = line + ' ' + word if line else word
+                bbox = draw.textbbox((0, 0), test_line, font=font)
+                w = bbox[2] - bbox[0]
+                if w <= max_width:
+                    line = test_line
+                    words.pop(0)
+                else:
+                    break
+            if not line:
+                # Force at least one word per line
+                line = words.pop(0)
+            lines.append(line)
+        return '\n'.join(lines)
 
-    # Draw text next to icon
+    # Prepare text
     text_x = icon_x + icon_size + 20
     text_y = icon_y
-    draw.multiline_text((text_x, text_y), overview_text, font=font_text, fill=0)
+    max_text_width = (overview_x + overview_width) - text_x - 10  # 10 for right padding
+    wrapped_short_forecast = wrap_text(short_forecast, font_text, max_text_width, draw)
+    overview_text = f"{wrapped_short_forecast}\nHigh: {temp_high}°{temp_unit}\nLow: {temp_low}°{temp_unit}"
+
+    # Draw text next to icon
+    draw.multiline_text((text_x, text_y), overview_text, font=font_text, fill=0, spacing=4)
 
     # Adjust start position for hourly data
     hourly_start_x = overview_x + overview_width + 20  # Start after the overview area
@@ -185,10 +220,30 @@ def create_weather_image(daily_data, hourly_data, grid_data):
     total_width = IMAGE_WIDTH - hourly_start_x - 50  # 50 for right margin
     max_box_height = IMAGE_HEIGHT - hourly_start_y - 50  # 50 for bottom margin
     box_width = total_width // 2  # Two columns
-    box_height = None  # We'll calculate based on content
 
-    # Prepare to split periods into rows
-    periods_per_column = (num_periods + 1) // 2  # Distribute periods evenly between two columns
+    icon_size_small = 80  # Increased icon size
+
+    # Vertical spacing between hourly forecasts
+    vertical_spacing = 40  # Added spacing in pixels
+
+    # Estimate content height per hourly forecast
+    sample_lines = [
+        ("12 PM", font_time),
+        ("75°F", font_temp),
+        ("Precip: 20%", font_main),
+        ("Humidity: 60%", font_humidity)
+    ]
+    total_text_height = 0
+    for text_line, font in sample_lines:
+        bbox = draw.textbbox((0, 0), text_line, font=font)
+        line_height = bbox[3] - bbox[1]
+        total_text_height += line_height + int(font.size * 0.1)
+    content_height = max(icon_size_small, total_text_height) + 20  # Padding
+    content_height += vertical_spacing  # Add vertical spacing
+
+    # Calculate how many periods can fit in one column
+    periods_per_column = int((max_box_height + vertical_spacing) // content_height)
+    periods_per_column = min(periods_per_column, (num_periods + 1) // 2)
 
     # Start positions for columns
     column_positions = [
@@ -196,14 +251,12 @@ def create_weather_image(daily_data, hourly_data, grid_data):
         (hourly_start_x + box_width, hourly_start_y)
     ]
 
-    icon_size_small = 64  # Size of the small icons for hourly forecasts
-
     for idx, period in enumerate(filtered_periods):
         column = idx // periods_per_column
         position_in_column = idx % periods_per_column
 
         box_x, base_y = column_positions[column]
-        box_y = base_y + position_in_column * (max_box_height // periods_per_column)
+        box_y = base_y + position_in_column * content_height
 
         # Get time
         period_time = datetime.datetime.fromisoformat(period["startTime"])
@@ -231,14 +284,6 @@ def create_weather_image(daily_data, hourly_data, grid_data):
         icon_url = period["icon"]
         icon_image = download_and_process_icon(icon_url, icon_size_small)
 
-        # Prepare text
-        forecast_text = (
-            f"Time: {time_str}\n"
-            f"Temp: {temperature}°{temperature_unit}\n"
-            f"Precipitation: {precipitation}\n"
-            f"Humidity: {humidity}"
-        )
-
         # Calculate positions
         icon_x = box_x + 10
         icon_y = box_y + 10
@@ -249,14 +294,21 @@ def create_weather_image(daily_data, hourly_data, grid_data):
         # Draw the icon
         image.paste(icon_image, (icon_x, icon_y))
 
-        # Draw text block
-        draw.multiline_text(
-            (text_x, text_y),
-            forecast_text,
-            font=font_small_text,
-            fill=0,
-            spacing=4
-        )
+        # Prepare text lines
+        lines = [
+            (time_str, font_time),
+            (f"{temperature}°{temperature_unit}", font_temp),
+            (f"Precip: {precipitation}", font_main),
+            (f"Humidity: {humidity}", font_humidity)
+        ]
+
+        # Draw text lines
+        current_y = text_y
+        for text_line, font in lines:
+            draw.text((text_x, current_y), text_line, font=font, fill=0)
+            bbox = draw.textbbox((text_x, current_y), text_line, font=font)
+            line_height = bbox[3] - bbox[1]
+            current_y += line_height + int(font.size * 0.1)  # Dynamic spacing
 
     # Rotate the content image by 90 degrees to fit into portrait mode
     final_image = image.rotate(90, expand=True)
