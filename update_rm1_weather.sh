@@ -11,11 +11,11 @@ REMOTE_IMAGE_PATH='/usr/share/remarkable/poweroff.png'
 
 # Enable power to USB hub port
 uhubctl -l $USB_DEVICE -a 0
-sleep 20
+sleep 10
 
 
 uhubctl -l $USB_DEVICE -a 1
-sleep 20  # Wait for the device to boot up
+sleep 35  # Wait for the device to boot up
 
 # Generate image before transfer
 python3 gen_image_detailed_2.py
