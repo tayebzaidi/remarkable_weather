@@ -313,12 +313,12 @@ def create_weather_image(daily_data, hourly_data, grid_data):
     # Rotate the content image by 90 degrees to fit into portrait mode
     final_image = image.rotate(90, expand=True)
 
-    # Save the image
-    final_image.save("weather_forecast_detailed.png")
+    # # Save the image
+    # final_image.save("weather_forecast_detailed.png")
 
     # Save the image with optimization, maximum compression, and set DPI to 226
     final_image.save(
-        "weather_forecast_detailed.png",
+        "weather_forecast.png",
         optimize=True,
         compress_level=9,
         dpi=(226, 226)
