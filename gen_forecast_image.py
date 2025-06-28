@@ -401,14 +401,10 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
         period_time = datetime.datetime.fromisoformat(period["startTime"])
         # Additional logic if code is run at night to get next days data:
         forecast_date = now.date()
-        print(forecast_date)
         if now.hour >= end_hour:
             forecast_date += datetime.timedelta(days=1)
-            print(forecast_date)
         if period_time.date() == forecast_date and 5 <= period_time.hour <= end_hour:
-            print("Filtered Period Length: ", len(filtered_periods))
             filtered_periods.append(period)
-    print(filtered_periods)
 
     if not filtered_periods:
         raise Exception("No hourly data available for the specified time range.")
@@ -450,9 +446,7 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
     # Calculate how many periods fit in one column
     num_periods = len(filtered_periods)
     periods_per_column = int((max_box_height + vertical_spacing) // content_height)
-    print(periods_per_column)
     periods_per_column = min(periods_per_column, (num_periods + 1) // 2)
-    print(periods_per_column)
 
     # Start positions for columns
     column_positions = [
@@ -538,7 +532,7 @@ def main():
         # 3) Build and save the combined image
         create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, tasks_overdue)
 
-        print("Detailed weather image (with Todoist tasks) generated successfully.")
+        #print("Detailed weather image (with Todoist tasks) generated successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
