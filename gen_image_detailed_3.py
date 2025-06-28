@@ -282,27 +282,39 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
     overview_width = IMAGE_WIDTH // 3  # Reserve 1/3 of the width
     overview_height = IMAGE_HEIGHT - overview_y - 50  # 50 for bottom margin
 
-    # --- DAILY FORECAST (TODAY) ---
-    periods = daily_data["properties"]["periods"]
-    today_daytime = None
-    today_nighttime = None
-    for period in periods:
-        start_date = datetime.datetime.fromisoformat(period["startTime"]).date()
-        if start_date == now.date():
-            if period["isDaytime"]:
-                today_daytime = period
-            else:
-                today_nighttime = period
+# --- DAILY FORECAST (TODAY -OR- TOMORROW) --------------------------------
+    #
+    # If we’re running late in the evening (≥ 22:00) we want the screen to
+    # show the *next* calendar day instead of a day that’s almost over.
+    #
+    target_date = now.date()
+    if now.hour >= 19:                 # 7 PM threshold
+        target_date += datetime.timedelta(days=1)
 
-    if not today_daytime or not today_nighttime:
-        raise Exception("Today's forecast data is incomplete.")
+    # Grab the daytime and nighttime periods that belong to the target date
+    periods = daily_data["properties"]["periods"]
+    day_period   = None   # first daytime block for the target date
+    night_period = None   # first nighttime block for the target date
+    for p in periods:
+        p_date = datetime.datetime.fromisoformat(p["startTime"]).date()
+        if p_date == target_date:
+            # Keep the first match of each kind
+            if p["isDaytime"] and day_period is None:
+                day_period = p
+            elif not p["isDaytime"] and night_period is None:
+                night_period = p
+        if day_period and night_period:
+            break
+
+    if not day_period or not night_period:
+        raise Exception(f"Forecast data for {target_date.isoformat()} is incomplete.")
 
     # Overall forecast information
-    temp_high = today_daytime["temperature"]
-    temp_low = today_nighttime["temperature"]
-    temp_unit = today_daytime["temperatureUnit"]
-    short_forecast = today_daytime["shortForecast"]
-    icon_url = today_daytime["icon"]
+    temp_high = day_period["temperature"]
+    temp_low = night_period["temperature"]
+    temp_unit = day_period["temperatureUnit"]
+    short_forecast = day_period["shortForecast"]
+    icon_url = day_period["icon"]
 
     # Download and process the larger icon for daily forecast
     icon_size = 256
@@ -380,13 +392,23 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
     hourly_start_x = overview_x + overview_width + 20  # Start after overview area
     hourly_start_y = overview_y
 
-    # Prepare hourly data for hours from 5 AM to 5 PM
+    # Prepare hourly data for hours from 5 AM to 5 PM (or later if run later)
+    start_hour = 5
+    end_hour = start_hour + 11
     periods = hourly_data["properties"]["periods"]
     filtered_periods = []
     for period in periods:
         period_time = datetime.datetime.fromisoformat(period["startTime"])
-        if period_time.date() == now.date() and 5 <= period_time.hour <= 17:
+        # Additional logic if code is run at night to get next days data:
+        forecast_date = now.date()
+        print(forecast_date)
+        if now.hour >= end_hour:
+            forecast_date += datetime.timedelta(days=1)
+            print(forecast_date)
+        if period_time.date() == forecast_date and 5 <= period_time.hour <= end_hour:
+            print("Filtered Period Length: ", len(filtered_periods))
             filtered_periods.append(period)
+    print(filtered_periods)
 
     if not filtered_periods:
         raise Exception("No hourly data available for the specified time range.")
@@ -408,7 +430,7 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
     max_box_height = IMAGE_HEIGHT - hourly_start_y - 50
     box_width = total_width // 2  # Two columns
     icon_size_small = 80
-    vertical_spacing = 40
+    vertical_spacing = 30
 
     # Estimate content height per hourly forecast
     sample_lines = [
@@ -428,7 +450,9 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
     # Calculate how many periods fit in one column
     num_periods = len(filtered_periods)
     periods_per_column = int((max_box_height + vertical_spacing) // content_height)
+    print(periods_per_column)
     periods_per_column = min(periods_per_column, (num_periods + 1) // 2)
+    print(periods_per_column)
 
     # Start positions for columns
     column_positions = [
@@ -504,19 +528,6 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
 
 
 def main():
-    try:
-        # 1) Fetch NOAA weather data
-        daily_data, hourly_data, grid_data = fetch_weather_data(LAT, LON)
-
-        # 2) Fetch tasks from Todoist
-        tasks_for_today, tasks_overdue = fetch_todoist_tasks(TODOIST_API_TOKEN)
-
-        # 3) Build and save the combined image
-        create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, tasks_overdue)
-
-        print("Detailed weather image (with Todoist tasks) generated successfully.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
     try:
         # 1) Fetch NOAA weather data
         daily_data, hourly_data, grid_data = fetch_weather_data(LAT, LON)

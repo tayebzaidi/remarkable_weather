@@ -18,7 +18,7 @@ uhubctl -l $USB_DEVICE -a 1
 sleep 35  # Wait for the device to boot up
 
 # Generate image before transfer
-python3 gen_image_detailed_2.py
+python3 gen_image_detailed_3.py
 sleep 10
 
 # Transfer the image to RM1 device
