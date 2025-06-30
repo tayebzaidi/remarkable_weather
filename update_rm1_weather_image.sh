@@ -4,7 +4,7 @@
 WORKDIR="$HOME/Development/remarkable_weather"
 PYTHON="/usr/bin/python3"
 RM1_CONFIG_NAME='remarkable'
-RM1_IP='192.168.4.168'   # Replace with the IP address of your RM1 device
+RM1_IP='192.168.4.171'   # Replace with the IP address of your RM1 device
 RM1_USER='root'        
 IMAGE_PATH='weather_forecast.png'
 REMOTE_IMAGE_PATH='~/Development/weather_items/poweroff.png'
