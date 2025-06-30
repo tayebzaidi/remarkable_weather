@@ -2,8 +2,8 @@
 Description=Re-arm the RTC alarm for 04:00 Central after every boot or wake
 
 [Timer]
-OnBootSec=30
-OnUnitActiveSec=12h      # Any reasonable period ≥ the wake interval is fine
+OnBootSec=30s
+OnWakeSec=30s      # Any reasonable period ≥ the wake interval is fine
 Unit=rm_wakeup.service
 
 [Install]
