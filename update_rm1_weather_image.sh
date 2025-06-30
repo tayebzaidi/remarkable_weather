@@ -17,7 +17,7 @@ cd "$WORKDIR"
 "$PYTHON" gen_forecast_image.py
 
 # 2) Copy it to the tablet
-if scp -vv $IMAGE_PATH $RM1_USER@$RM1_IP:$REMOTE_IMAGE_PATH; then
+if scp -vv $IMAGE_PATH $RM1_USER@$RM1_CONFIG_NAME:$REMOTE_IMAGE_PATH; then
 	echo "$(timestamp) – power-off image UPDATED successfully" >> "$LOG"
 else
 	echo "$(timestamp) - ERROR: could not copy image (tablet unreachable)" >> "$LOG"
