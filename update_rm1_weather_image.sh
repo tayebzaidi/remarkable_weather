@@ -18,6 +18,7 @@ cd "$WORKDIR"
 
 # 2) Copy it to the tablet
 if scp -q $IMAGE_PATH $RM1_USER@$RM1_CONFIG_NAME:$REMOTE_IMAGE_PATH; then
+	ssh -o BatchMode=yes $RM1_USER@$RM1_CONFIG_NAME 'cd /home/root/wi && ./set_next_wakeup.sh'
 	echo "$(timestamp) – power-off image UPDATED successfully" >> "$LOG"
 else
 	echo "$(timestamp) - ERROR: could not copy image (tablet unreachable)" >> "$LOG"
