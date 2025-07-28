@@ -392,8 +392,8 @@ def create_weather_image(daily_data, hourly_data, grid_data, tasks_for_today, ta
     hourly_start_x = overview_x + overview_width + 20  # Start after overview area
     hourly_start_y = overview_y
 
-    # Prepare hourly data for hours from 5 AM to 5 PM (or later if run later)
-    start_hour = 5
+    # Prepare hourly data for hours from 6 AM to 6 PM (or later if run later)
+    start_hour = 6
     end_hour = start_hour + 11
     periods = hourly_data["properties"]["periods"]
     filtered_periods = []
